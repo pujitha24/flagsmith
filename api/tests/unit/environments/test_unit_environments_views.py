@@ -846,6 +846,30 @@ def test_list_environments__admin_user__query_count_is_expected(
     assert response.status_code == status.HTTP_200_OK
 
 
+def test_list_environments__page_size_param__honours_page_size(
+    admin_client_new: APIClient,
+    project: Project,
+) -> None:
+    # Given
+    for i in range(12):
+        Environment.objects.create(name=f"Environment {i}", project=project)
+    url = reverse("api-v1:environments:environment-list")
+
+    # When
+    default_response = admin_client_new.get(url, data={"project": project.id})
+    sized_response = admin_client_new.get(
+        url, data={"project": project.id, "page_size": 2}
+    )
+
+    # Then
+    assert default_response.status_code == status.HTTP_200_OK
+    assert default_response.json()["count"] == 12
+    assert len(default_response.json()["results"]) == 12
+    assert sized_response.status_code == status.HTTP_200_OK
+    assert len(sized_response.json()["results"]) == 2
+    assert sized_response.json()["next"] is not None
+
+
 def test_create_environment__with_required_metadata__returns_201(  # type: ignore[no-untyped-def]
     project,
     admin_client_new,
